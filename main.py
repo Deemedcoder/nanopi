@@ -1,13 +1,17 @@
 import json
 import requests
-from pysnmp.hlapi import *
+from pysnmp.entity.rfc3413 import getCmd
+from pysnmp.entity.rfc3413 import ContextData
+from pysnmp.entity.rfc3413 import SnmpEngine
+from pysnmp.entity.rfc3413 import CommunityData
+from pysnmp.entity.rfc3413 import UdpTransportTarget
+from pysnmp.hlapi import ObjectType, ObjectIdentity
 import subprocess
 import platform
 import time
 
 # API URL
 fetch_url = "http://localhost/api.php"
-
 
 def fetch_api_data(url):
     """
@@ -249,29 +253,24 @@ def run_continuously():
                 print("API Response Body:", response.text)
 
                 # Get the API endpoint from the server
-                endpoint_url = "http://localhost/getapiendpoint.php"
+                endpoint_url = "http://localhost/api_endpoint.php"  # Define the endpoint URL
+
+                # Send the data to the appropriate API endpoint
                 api_endpoint = get_api_endpoint(endpoint_url)
 
                 if api_endpoint:
-                    data_hardware = fetch_hardware_data_from_api()
-                    #print(formatted_data)
+                    print("Sending data to API endpoint:", api_endpoint)
+                    send_data_to_api(formatted_data, api_endpoint)
 
-                    main_final = merge_json_data(data_hardware, formatted_data)
-                    print(type(formatted_data))
-
-                    print(main_final)
-
-                    # Send the formatted data to the API
-                    send_data_to_api(main_final, api_endpoint)
                 else:
-                    print("API endpoint is not available")
-
+                    print("Error: API endpoint not found.")
         except Exception as e:
-            print("Error occurred: {}".format(e))
+            print("Error occurred in main loop: {}".format(e))
 
-        # Wait before the next cycle
-        time.sleep(300)  # Run every 5 minutes
+        # Wait for 60 seconds before running again
+        time.sleep(60)
 
 
-if __name__ == "__main__":
-    run_continuously()
+# Run the main function
+run_continuously()
+
