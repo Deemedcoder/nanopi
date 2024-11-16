@@ -1,11 +1,6 @@
 import json
 import requests
-from pysnmp.entity.rfc3413 import getCmd
-from pysnmp.entity.rfc3413 import ContextData
-from pysnmp.entity.rfc3413 import SnmpEngine
-from pysnmp.entity.rfc3413 import CommunityData
-from pysnmp.entity.rfc3413 import UdpTransportTarget
-from pysnmp.hlapi import ObjectType, ObjectIdentity
+from pysnmp.entity import cmdgen
 import subprocess
 import platform
 import time
@@ -45,25 +40,28 @@ def ping_device(hostname, timeout=1, count=1):
         return False
 
 
-# SNMP GET function
+# SNMP GET function using pysnmp cmdgen
 def snmp_get(ip, port, community, *oids):
     try:
-        object_types = [ObjectType(ObjectIdentity(oid)) for oid in oids]
-        errorIndication, errorStatus, errorIndex, varBinds = next(
-            getCmd(SnmpEngine(),
-                   CommunityData(community, mpModel=1),
-                   UdpTransportTarget((ip, port)),
-                   ContextData(),
-                   *object_types))
+        # Initialize the SNMP engine and command generator
+        community_string = cmdgen.CommunityData(community)
+        transport_target = cmdgen.UdpTransportTarget((ip, port))
+        cmd_gen = cmdgen.CommandGenerator()
 
-        if errorIndication:
-            print("Error Indication: {}".format(errorIndication))
+        # Prepare OIDs
+        oids = [cmdgen.MibVariable(oid) for oid in oids]
+
+        # Perform SNMP GET operation
+        error_indication, error_status, error_index, var_binds = cmd_gen.getCmd(community_string, transport_target, *oids)
+
+        if error_indication:
+            print("Error Indication: {}".format(error_indication))
             return [None] * len(oids)
-        elif errorStatus:
-            print("Error Status: {} at {}".format(errorStatus.prettyPrint(), errorIndex))
+        elif error_status:
+            print("Error Status: {} at {}".format(error_status.prettyPrint(), error_index))
             return [None] * len(oids)
         else:
-            return [varBind[1].prettyPrint() for varBind in varBinds]
+            return [var_bind[1] for var_bind in var_binds]
     except Exception as e:
         print("Exception in SNMP GET: {}".format(e))
         return [None] * len(oids)
@@ -273,4 +271,3 @@ def run_continuously():
 
 # Run the main function
 run_continuously()
-
